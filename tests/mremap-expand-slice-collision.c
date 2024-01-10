@@ -35,7 +35,7 @@ long hpage_size, page_size;
 
 void init_slice_boundary(int fd)
 {
-	unsigned long slice_size;
+	unsigned long slice_size, offset;
 	void *p, *heap;
 	int i, rc;
 #if defined(__LP64__) && !defined(__aarch64__)
@@ -52,6 +52,13 @@ void init_slice_boundary(int fd)
 	heap = malloc(1);
 	free(heap);
 
+	/* Prevent heap overlap; align offset to huge page size */
+	offset = ((unsigned long) heap + 3*hpage_size) & ~(hpage_size - 1);
+	if (slice_boundary <= offset) {
+		slice_boundary = offset;
+		slice_size = hpage_size;
+	}
+		  
 	/* Find 2 neighbour slices with couple huge pages free
 	 * around slice boundary.
 	 * 16 is the maximum number of slices (low/high) */
